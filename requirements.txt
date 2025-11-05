@@ -1,6 +1,5 @@
 ﻿Flask==2.3.3
 PyTelegramBotAPI==4.15.0
 requests==2.31.0
-Pillow==9.5.0
 cloudinary==1.36.0
 gunicorn==21.2.0
