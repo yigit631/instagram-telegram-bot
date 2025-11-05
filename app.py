@@ -9,7 +9,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Environment variables - SADECE environment'dan oku
+# Environment variables - RENDER İÇİN
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 INSTAGRAM_TOKEN = os.environ.get('INSTAGRAM_TOKEN')
 
@@ -19,7 +19,7 @@ if not TELEGRAM_TOKEN:
 if not INSTAGRAM_TOKEN:
     raise ValueError("❌ INSTAGRAM_TOKEN environment variable is required! Render Dashboard'dan ayarlayın.")
 
-# Cloudinary Configuration
+# Cloudinary Configuration - RENDER İÇİN
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
     api_key=os.environ.get('CLOUDINARY_API_KEY'),
@@ -28,6 +28,7 @@ cloudinary.config(
 )
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
 # Storage
 user_sessions = {}
 scheduled_posts = []
@@ -38,6 +39,7 @@ app = Flask(__name__)
 # Telegram Bot Handlers
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    print(f"🎯 /start komutu alındı: {message.from_user.id}")
     user_id = message.from_user.id
     user_sessions[user_id] = {'state': 'ready'}
     
@@ -61,6 +63,7 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['help'])
 def send_help(message):
+    print(f"🎯 /help komutu alındı: {message.from_user.id}")
     help_text = """
 🤖 *Video Paylaşımı İçin Önemli:*
 
@@ -84,6 +87,7 @@ def send_help(message):
 
 @bot.message_handler(commands=['posts'])
 def show_posts(message):
+    print(f"🎯 /posts komutu alındı: {message.from_user.id}")
     user_id = message.from_user.id
     user_posts = [p for p in scheduled_posts if p.get('user_id') == user_id]
     
@@ -105,6 +109,7 @@ def show_posts(message):
 
 @bot.message_handler(commands=['cancel'])
 def cancel_operation(message):
+    print(f"🎯 /cancel komutu alındı: {message.from_user.id}")
     user_id = message.from_user.id
     if user_id in user_sessions:
         user_sessions[user_id] = {'state': 'ready'}
@@ -113,28 +118,51 @@ def cancel_operation(message):
 @bot.message_handler(content_types=['photo', 'video'])
 def handle_media(message):
     try:
+        print(f"📸 MEDYA ALINDI: {message.content_type} from user {message.from_user.id}")
+        
         user_id = message.from_user.id
         telegram_media_type = 'video' if message.video else 'photo'
         
+        # Hemen cevap ver
+        bot.reply_to(message, f"📥 Medya alındı! İşleniyor...")
+        
         if telegram_media_type == 'video' and message.video.duration > 60:
-            bot.reply_to(message, "❌ Video 60 saniyeden uzun olamaz!")
+            bot.reply_to(message, "❌ Video 60 saniyeden uzun olamaz! Lütfen daha kısa video gönderin.")
             return
         
         if telegram_media_type == 'photo':
+            print("🔍 Fotoğraf işleniyor...")
             photo = message.photo[-1]
             file_info = bot.get_file(photo.file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            upload_result = cloudinary.uploader.upload(downloaded_file, resource_type='image', folder='telegram_instagram')
+            
+            print("☁️ Cloudinary'ye yükleniyor...")
+            upload_result = cloudinary.uploader.upload(
+                downloaded_file,
+                resource_type='image',
+                folder='telegram_instagram'
+            )
             instagram_media_type = 'image'
-        else:
+            
+        else:  # video
+            print("🔍 Video işleniyor...")
             video = message.video
             file_info = bot.get_file(video.file_id)
             downloaded_file = bot.download_file(file_info.file_path)
+            
             if len(downloaded_file) > 100 * 1024 * 1024:
                 bot.reply_to(message, "❌ Video 100MB'den büyük olamaz!")
                 return
-            upload_result = cloudinary.uploader.upload(downloaded_file, resource_type='video', folder='telegram_instagram', chunk_size=6000000)
+            
+            upload_result = cloudinary.uploader.upload(
+                downloaded_file,
+                resource_type='video',
+                folder='telegram_instagram',
+                chunk_size=6000000
+            )
             instagram_media_type = 'video'
+        
+        print(f"✅ Cloudinary yükleme başarılı: {upload_result['secure_url']}")
         
         user_sessions[user_id] = {
             'state': 'waiting_caption',
@@ -145,16 +173,23 @@ def handle_media(message):
         }
         
         if telegram_media_type == 'photo':
-            bot.send_photo(user_id, downloaded_file, caption="📸 *Fotoğraf hazır!* Açıklama yaz:", parse_mode='Markdown')
+            bot.send_photo(user_id, downloaded_file, 
+                          caption="📸 *Fotoğraf hazır!* Açıklama yaz:",
+                          parse_mode='Markdown')
         else:
-            bot.send_message(user_id, f"🎥 *Video hazır!* ({upload_result.get('duration', 0):.1f}s)\nAçıklama yaz:", parse_mode='Markdown')
+            bot.send_message(user_id, 
+                           f"🎥 *Video hazır!* ({upload_result.get('duration', 0):.1f}s)\nAçıklama yaz:",
+                           parse_mode='Markdown')
                       
     except Exception as e:
-        bot.reply_to(message, f"❌ Hata: {str(e)}")
+        print(f"❌ MEDYA HATASI: {str(e)}")
+        bot.reply_to(message, f"❌ Medya işleme hatası: {str(e)}")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     try:
+        print(f"📨 MESAJ ALINDI: {message.text} from {message.from_user.id}")
+        
         user_id = message.from_user.id
         text = message.text.strip()
         
@@ -166,6 +201,7 @@ def handle_message(message):
         if session['state'] == 'waiting_caption':
             session['caption'] = text
             session['state'] = 'waiting_schedule'
+            
             schedule_options = """
 ⏰ *Ne zaman paylaşayım?*
 
@@ -180,23 +216,30 @@ def handle_message(message):
             
         elif session['state'] == 'waiting_schedule':
             schedule_time = parse_schedule_time(text)
+            
             if not schedule_time:
                 bot.reply_to(message, "❌ Geçersiz zaman! Örnek: `1s` veya `yarın 09:00`")
                 return
             
             success = schedule_post(user_id, session, schedule_time)
+            
             if success:
                 time_str = schedule_time.strftime('%d.%m.%Y %H:%M')
                 media_type = 'Video' if session['media_type'] == 'video' else 'Fotoğraf'
-                bot.reply_to(message, f"✅ *{media_type} zamanlandı!* 🎉\n📅 {time_str}\nGönderiler: /posts")
+                bot.reply_to(message, 
+                           f"✅ *{media_type} zamanlandı!* 🎉\n"
+                           f"📅 {time_str}\n"
+                           f"Gönderiler: /posts")
             else:
                 bot.reply_to(message, "❌ Zamanlanamadı!")
             
             user_sessions[user_id] = {'state': 'ready'}
+            
         else:
             bot.reply_to(message, "📸 Medya göndererek başla!")
             
     except Exception as e:
+        print(f"❌ MESAJ İŞLEME HATASI: {str(e)}")
         bot.reply_to(message, f"❌ Hata: {str(e)}")
 
 def parse_schedule_time(text):
@@ -238,9 +281,10 @@ def schedule_post(user_id, session, schedule_time):
         }
         scheduled_posts.append(post)
         post_id_counter += 1
+        print(f"✅ Gönderi zamanlandı: {post['id']} - {session['media_type']}")
         return True
     except Exception as e:
-        print(f"Schedule error: {e}")
+        print(f"❌ Schedule error: {e}")
         return False
 
 def post_to_instagram(media_url, caption, media_type='image'):
@@ -325,7 +369,7 @@ def process_scheduled_posts():
             
             time.sleep(30)
         except Exception as e:
-            print(f"Scheduler error: {e}")
+            print(f"❌ Scheduler error: {e}")
             time.sleep(60)
 
 @app.route('/')
@@ -363,21 +407,27 @@ def start_bot():
     print("🤖 Telegram Bot starting...")
     while True:
         try:
-            bot.infinity_polling(timeout=60, long_polling_timeout=60)
+            print("🔄 Bot polling başlatılıyor...")
+            bot.remove_webhook()  # Webhook'u temizle
+            time.sleep(1)
+            bot.infinity_polling(timeout=60, long_polling_timeout=60, restart_on_change=True)
         except Exception as e:
-            print(f"Bot error: {e}")
+            print(f"❌ Bot hatası: {e}")
             time.sleep(10)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Starting on port {port}...")
     
+    # Scheduler'ı başlat
     scheduler_thread = threading.Thread(target=process_scheduled_posts)
     scheduler_thread.daemon = True
     scheduler_thread.start()
     
+    # Bot'u başlat
     bot_thread = threading.Thread(target=start_bot)
     bot_thread.daemon = True
     bot_thread.start()
     
+    # Flask'ı başlat
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
