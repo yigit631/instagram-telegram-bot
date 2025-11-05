@@ -1,3 +1,11 @@
+# Yeni eklemeler
+*.env
+.env.local
+.env.production
+config.py
+secrets.py
+keys.py
+
 __pycache__/
 *.pyc
 *.pyo

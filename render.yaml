@@ -5,14 +5,3 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
-    envVars:
-      - key: TELEGRAM_TOKEN
-        sync: false
-      - key: INSTAGRAM_TOKEN
-        sync: false
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false

@@ -9,20 +9,25 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Environment variables
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', '8251052108:AAERBkp_5gDQ9o0ej54vQmuhTCDtHu98Cbk')
-INSTAGRAM_TOKEN = os.environ.get('INSTAGRAM_TOKEN', 'IGAAVMdm9ie0RBZAFRwRlZAZAVjBfcjE2Y0F0dHZAJMHA2dnJwSkE3U1VJTHBSU2FYdXdrZAGtYNmNmUTBtcnp1Y01FYWZAJZA2tzRnd2bC1XaFBVZAWVFaGszeGNVVVdzejFzdnh0LXNjTm9TRG5vdHlYdklCeHkxZAUZAabU81X2FxVDZAmcwZDZD')
+# Environment variables - SADECE environment'dan oku
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+INSTAGRAM_TOKEN = os.environ.get('INSTAGRAM_TOKEN')
+
+# CRITICAL: Token kontrolü
+if not TELEGRAM_TOKEN:
+    raise ValueError("❌ TELEGRAM_TOKEN environment variable is required! Render Dashboard'dan ayarlayın.")
+if not INSTAGRAM_TOKEN:
+    raise ValueError("❌ INSTAGRAM_TOKEN environment variable is required! Render Dashboard'dan ayarlayın.")
 
 # Cloudinary Configuration
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'delvfemhb'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY', '629921112856386'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET', 'qUen0_sODkuKksOEoJOzOtqz38E'),
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True
 )
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
 # Storage
 user_sessions = {}
 scheduled_posts = []
