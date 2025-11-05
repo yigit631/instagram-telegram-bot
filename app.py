@@ -19,6 +19,8 @@ if not TELEGRAM_TOKEN:
 if not INSTAGRAM_TOKEN:
     raise ValueError("❌ INSTAGRAM_TOKEN environment variable is required! Render Dashboard'dan ayarlayın.")
 
+print("=" * 60)
+print("🚀 NEXABOT STARTING...")
 print(f"🔑 TELEGRAM_TOKEN: {'✅' if TELEGRAM_TOKEN else '❌'}")
 print(f"🔑 INSTAGRAM_TOKEN: {'✅' if INSTAGRAM_TOKEN else '❌'}")
 
@@ -31,6 +33,7 @@ cloudinary.config(
 )
 
 print(f"☁️ CLOUDINARY: {'✅' if os.environ.get('CLOUDINARY_CLOUD_NAME') else '❌'}")
+print("=" * 60)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -511,7 +514,7 @@ def health_check():
     })
 
 def start_bot():
-    print("🤖🤖🤖 NEXABOT BAŞLIYOR...")
+    print("🤖🤖🤖 BOT THREAD BAŞLIYOR...")
     time.sleep(5)  # Flask'ın başlaması için bekle
     
     while True:
@@ -519,8 +522,8 @@ def start_bot():
             print("🔴 WEBHOOK TEMİZLE...")
             bot.remove_webhook()
             time.sleep(2)
-            print("🟢 POLLING BAŞLATILIYOR...")
-            bot.polling(none_stop=True, timeout=60, restart_on_change=True)
+            print("🟢 POLLING BAŞLAT...")
+            bot.polling(none_stop=True, timeout=60)
         except Exception as e:
             print(f"❌ BOT HATASI: {str(e)}")
             time.sleep(10)
@@ -528,12 +531,10 @@ def start_bot():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     
-    print("=" * 50)
-    print("🚀 NEXABOT STARTING...")
+    print("=" * 60)
+    print("🚀 NEXABOT DIRECT START...")
     print(f"📍 Port: {port}")
-    print(f"🔑 Telegram Token: {'✅' if TELEGRAM_TOKEN else '❌'}")
-    print(f"📸 Instagram Token: {'✅' if INSTAGRAM_TOKEN else '❌'}")
-    print("=" * 50)
+    print("=" * 60)
     
     # Scheduler'ı başlat
     scheduler_thread = threading.Thread(target=process_scheduled_posts)
